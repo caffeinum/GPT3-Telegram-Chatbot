@@ -12,18 +12,12 @@ import openai
 
 #OpenAI API key
 aienv = os.getenv('OPENAI_KEY')
-if aienv == None:
-    openai.api_key = "YOUR OPENAI API KEY GOES HERE"
-else:
-    openai.api_key = aienv
+openai.api_key = "YOUR OPENAI API KEY GOES HERE" if aienv is None else aienv
 print(aienv)
 
 #Telegram bot key
 tgenv = os.getenv('TELEGRAM_KEY')
-if tgenv == None:
-    tgkey = "YOUR TELEGRAM BOT KEY GOES HERE"
-else:
-    tgkey = tgenv
+tgkey = "YOUR TELEGRAM BOT KEY GOES HERE" if tgenv is None else tgenv
 print(tgenv)
 
 
@@ -44,7 +38,7 @@ chat_log = None
 botname = 'AI'
 username = 'Human'
 # Max chat log length (A token is about 4 letters and max tokens is 2048)
-max = int(3000)
+max = 3000
 
 
 # Enable logging
@@ -67,7 +61,6 @@ def start(bot, update):
     global tim
     global botname
     global username
-    left = str(tim)
     if tim == 1:
         chat_log = None
         cache = None
@@ -75,10 +68,13 @@ def start(bot, update):
         botname = 'AI'
         username = 'Human'
         update.message.reply_text('Send a message!')
-        return 
     else:
-        update.message.reply_text('Bot is currently in use, make sure to set your settings when their timer runs down. ' + left + ' seconds.')
-        return
+        left = str(tim)
+        update.message.reply_text(
+            f'Bot is currently in use, make sure to set your settings when their timer runs down. {left} seconds.'
+        )
+
+    return
 
 
 def help(bot, update):
@@ -110,10 +106,12 @@ def reset(bot, update):
         botname = 'AI'
         username = 'Human'
         update.message.reply_text('Bot has been reset, send a message!')
-        return 
     else:
-        update.message.reply_text('Bot is currently in use, make sure to set your settings when their timer runs down. ' + left + ' seconds.')
-        return
+        update.message.reply_text(
+            f'Bot is currently in use, make sure to set your settings when their timer runs down. {left} seconds.'
+        )
+
+    return
 
 
 def retry(bot, update):
@@ -137,14 +135,15 @@ def retry(bot, update):
         botname = 'AI'
         username = 'Human'
         update.message.reply_text('Send a message!')
-        return 
     else:
-        update.message.reply_text('Bot is currently in use, make sure to set your settings when their timer runs down. ' + left + ' seconds.')
-        return
+        update.message.reply_text(
+            f'Bot is currently in use, make sure to set your settings when their timer runs down. {left} seconds.'
+        )
+
+    return
 
 def runn(bot, update):
     """Send a message when a message is received."""
-    new = False
     global botname
     global username
     if "/botname " in update.message.text:
@@ -152,7 +151,7 @@ def runn(bot, update):
             string = update.message.text
             charout = string.split("/botname ",1)[1]
             botname = charout
-            response = "The bot character name set to: " + botname
+            response = f"The bot character name set to: {botname}"
             update.message.reply_text(response)
         except Exception as e:
             update.message.reply_text(e)
@@ -162,12 +161,13 @@ def runn(bot, update):
             string = update.message.text
             userout = string.split("/username ",1)[1]
             username = userout
-            response = "Your character name set to: " + username
+            response = f"Your character name set to: {username}"
             update.message.reply_text(response)
         except Exception as e:
             update.message.reply_text(e)
         return
     else:
+        new = False
         comput = threading.Thread(target=wait, args=(bot, update, botname, username, new,))
         comput.start()
 
@@ -201,7 +201,9 @@ def wait(bot, update, botname, username, new):
                 running = False
     else:
         left = str(tim)
-        update.message.reply_text('Bot is in use, current cooldown is: ' + left + ' seconds.')
+        update.message.reply_text(
+            f'Bot is in use, current cooldown is: {left} seconds.'
+        )
 
 
 ################
@@ -212,10 +214,8 @@ def limit(text, max):
         inv = max * -1
         print("Reducing length of chat history... This can be a bit buggy.")
         nl = text[inv:]
-        text = re.search(r'(?<=\n)[\s\S]*', nl).group(0)
-        return text
-    else:
-        return text
+        text = re.search(r'(?<=\n)[\s\S]*', nl)[0]
+    return text
 
 
 def ask(username, botname, question, chat_log=None):
@@ -223,14 +223,13 @@ def ask(username, botname, question, chat_log=None):
         chat_log = 'The following is a chat between two users:\n\n'
     now = datetime.now()
     ampm = now.strftime("%I:%M %p")
-    t = '[' + ampm + '] '
+    t = f'[{ampm}] '
     prompt = f'{chat_log}{t}{username}: {question}\n{t}{botname}:'
     response = completion.create(
         prompt=prompt, engine="davinci", stop=['\n'], temperature=0.9,
         top_p=1, frequency_penalty=15, presence_penalty=2, best_of=3,
         max_tokens=250)
-    answer = response.choices[0].text.strip()
-    return answer
+    return response.choices[0].text.strip()
     # fp = 15 pp= 1 top_p = 1 temp = 0.9
 
 def append_interaction_to_chat_log(username, botname, question, answer, chat_log=None):
@@ -239,7 +238,7 @@ def append_interaction_to_chat_log(username, botname, question, answer, chat_log
     chat_log = limit(chat_log, max)
     now = datetime.now()
     ampm = now.strftime("%I:%M %p")
-    t = '[' + ampm + '] '
+    t = f'[{ampm}] '
     return f'{chat_log}{t}{username}: {question}\n{t}{botname}: {answer}\n'
 
 def interact(bot, update, botname, username, new):
